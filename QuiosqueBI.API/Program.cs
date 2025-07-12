@@ -9,47 +9,44 @@ using QuiosqueBI.API.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- SEÇÃO 1: REATIVADA ---
-// Configuração do CORS para permitir requisições do frontend
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: myAllowSpecificOrigins,
         policy =>
         {
-            // Adicione a URL do seu frontend de produção aqui também
-            policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "URL_DO_SEU_FRONTEND_NO_AZURE")
+            policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "https://victorious-dune-05e42d21e.1.azurestaticapps.net")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
 });
 
 // --- SEÇÃO 2: REATIVADA ---
-// Configuração do Entity Framework Core com PostgreSQL
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// --- SEÇÕES QUE PERMANECEM COMENTADAS POR ENQUANTO ---
-/*
+// --- SEÇÃO 3: REATIVADA ---
 // Configuração do Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     {
-        // ...
+        options.Password.RequireDigit = false;
+        options.Password.RequireLowercase = false;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Password.RequireUppercase = false;
+        options.Password.RequiredLength = 3;
+        options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ áéíóúàâêôãõç";
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+// --- SEÇÕES QUE PERMANECEM COMENTADAS ---
+/*
 builder.Services.AddScoped<IAnaliseService, AnaliseService>();
 
 // Configuração do JWT Authentication
-builder.Services.AddAuthentication(options =>
-    {
-        // ...
-    })
-    .AddJwtBearer(options =>
-    {
-        // ...
-    });
+builder.Services.AddAuthentication(options => { ... })
+    .AddJwtBearer(options => { ... });
 */
 
 builder.Services.AddEndpointsApiExplorer();
@@ -66,7 +63,6 @@ using (var scope = app.Services.CreateScope())
 }
 */
 
-// Apenas o Swagger fica no ambiente de desenvolvimento
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -74,15 +70,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors(myAllowSpecificOrigins); // <-- CORS REATIVADO
+app.UseCors(myAllowSpecificOrigins);
 
-// Autenticação e Autorização ainda comentadas
-// app.UseAuthentication();
-// app.UseAuthorization();
+// --- MIDDLEWARES DE AUTENTICAÇÃO REATIVADOS ---
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
-// Adicionamos nosso endpoint de teste para verificar se a API está online
-app.MapGet("/", () => "API QuiosqueBI - Teste com DBContext Ativo");
+// Alteramos a mensagem de teste para refletir a etapa atual
+app.MapGet("/", () => "API QuiosqueBI - Teste com DBContext e Identity Ativos");
 
 app.Run();
