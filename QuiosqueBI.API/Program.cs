@@ -9,6 +9,11 @@ using QuiosqueBI.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 1. Adiciona os serviços ao contêiner de injeção de dependência.
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 // Configuração do CORS
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
@@ -16,7 +21,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: myAllowSpecificOrigins,
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "https://victorious-dune-05e42d21e.1.azurestaticapps.net")
+            policy.WithOrigins("http://localhost:5173", 
+                               "https://localhost:5173", 
+                               "https://victorious-dune-05e42d21e.1.azurestaticapps.net")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -51,7 +58,7 @@ builder.Services.AddAuthentication(options =>
     .AddJwtBearer(options =>
     {
         options.SaveToken = true;
-        options.RequireHttpsMetadata = true; // Em produção, deve ser true.
+        options.RequireHttpsMetadata = true;
         options.TokenValidationParameters = new TokenValidationParameters()
         {
             ValidateIssuer = true,
@@ -62,16 +69,26 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-// --- SEÇÃO 6: REATIVADA ---
 builder.Services.AddScoped<IAnaliseService, AnaliseService>();
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Lógica de Seeding de Roles
+// 2. Configura o pipeline de requisições HTTP.
+
+// Deixamos o Swagger ativo em produção para facilitar os testes
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseHttpsRedirection();
+
+// A ordem aqui é importante:
+app.UseCors(myAllowSpecificOrigins); // Primeiro, aplica a política de CORS.
+app.UseAuthentication();             // Depois, verifica quem é o usuário.
+app.UseAuthorization();              // Por fim, verifica o que ele pode fazer.
+
+app.MapControllers();                // Mapeia as rotas para os seus controllers.
+
+// Lógica de Seeding de Roles (executa uma vez na inicialização)
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -85,22 +102,19 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Deixamos o Swagger ativo em produção para facilitar os testes
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-app.UseCors(myAllowSpecificOrigins);
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-
-// Removemos o endpoint de teste da raiz
-// app.MapGet("/", () => "...");
-
-app.MapPost("/api/auth/register-test", () =>
+app.MapGet("/debug-routes", (IEnumerable<EndpointDataSource> endpointSources) =>
 {
-    return Results.Ok(new { Message = "Endpoint de teste direto funcionou!" });
+    var endpoints = endpointSources
+        .SelectMany(es => es.Endpoints)
+        .OfType<RouteEndpoint>()
+        .OrderBy(e => e.RoutePattern.RawText);
+
+    return Results.Ok(endpoints.Select(e => new 
+    {
+        Name = e.DisplayName,
+        Route = e.RoutePattern.RawText,
+        Methods = string.Join(", ", e.Metadata.OfType<HttpMethodMetadata>().SelectMany(m => m.HttpMethods))
+    }));
 });
 
 app.Run();
