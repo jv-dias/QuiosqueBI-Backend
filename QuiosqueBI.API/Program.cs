@@ -102,6 +102,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+<<<<<<< HEAD
 app.MapGet("/debug-routes", (IEnumerable<EndpointDataSource> endpointSources) =>
 {
     var endpoints = endpointSources
@@ -117,4 +118,6 @@ app.MapGet("/debug-routes", (IEnumerable<EndpointDataSource> endpointSources) =>
     }));
 });
 
+=======
+>>>>>>> 3423461fe05864070f776aac6d207a810ed693a9
 app.Run();
