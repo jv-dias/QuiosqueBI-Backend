@@ -98,4 +98,9 @@ app.MapControllers();
 // Removemos o endpoint de teste da raiz
 // app.MapGet("/", () => "...");
 
+app.MapPost("/api/auth/register-test", () =>
+{
+    return Results.Ok(new { Message = "Endpoint de teste direto funcionou!" });
+});
+
 app.Run();
