@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
-using QuiosqueBI.API.Models; // Garanta que este using existe se ApplicationUser estiver em Models
+using QuiosqueBI.API.Models;
 using QuiosqueBI.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +16,6 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: myAllowSpecificOrigins,
         policy =>
         {
-            // Lembre-se de adicionar a URL do seu frontend de produção aqui
             policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "https://victorious-dune-05e42d21e.1.azurestaticapps.net")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
@@ -28,7 +27,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Configuração do Identity (Usando IdentityUser, ajuste se mudou para ApplicationUser)
+// Configuração do Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     {
         options.Password.RequireDigit = false;
@@ -52,7 +51,7 @@ builder.Services.AddAuthentication(options =>
     .AddJwtBearer(options =>
     {
         options.SaveToken = true;
-        options.RequireHttpsMetadata = false; // Em produção real, considere true
+        options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters()
         {
             ValidateIssuer = true,
@@ -63,8 +62,8 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-// --- SEÇÃO QUE PERMANECE COMENTADA ---
-// builder.Services.AddScoped<IAnaliseService, AnaliseService>();
+// --- SEÇÃO 6: REATIVADA ---
+builder.Services.AddScoped<IAnaliseService, AnaliseService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -72,41 +71,31 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// --- LÓGICA DE SEEDING REATIVADA ---
+// Lógica de Seeding de Roles
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
     string[] roleNames = { "Admin", "Testador", "Usuario" };
-    IdentityResult roleResult;
-
     foreach (var roleName in roleNames)
     {
-        var roleExist = await roleManager.RoleExistsAsync(roleName);
-        if (!roleExist)
+        if (!await roleManager.RoleExistsAsync(roleName))
         {
-            roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+            await roleManager.CreateAsync(new IdentityRole(roleName));
         }
     }
 }
 
-// Pipeline de requisições HTTP
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Deixamos o Swagger ativo em produção para facilitar os testes
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-
 app.UseCors(myAllowSpecificOrigins);
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
-// Endpoint de teste para esta fase
-app.MapGet("/", () => "API QuiosqueBI - Teste com Seeding de Roles Ativo");
+// Removemos o endpoint de teste da raiz
+// app.MapGet("/", () => "...");
 
 app.Run();
