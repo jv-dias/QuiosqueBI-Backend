@@ -15,7 +15,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: myAllowSpecificOrigins,
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
                 .AllowAnyHeader()
                 .AllowAnyMethod();
         });
@@ -94,7 +94,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-// app.UseHttpsRedirection(); // Descomente para forçar HTTPS
+app.UseHttpsRedirection(); // Força HTTPS
 app.UseCors(myAllowSpecificOrigins);
 app.UseAuthentication(); // <-- Primeiro, verifica quem é o usuário
 app.UseAuthorization(); // <-- Depois, verifica o que ele pode fazer
