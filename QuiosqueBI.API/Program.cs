@@ -8,7 +8,7 @@ using QuiosqueBI.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- SEÇÃO 1: REATIVADA ---
+// CORS
 var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options =>
 {
@@ -21,13 +21,12 @@ builder.Services.AddCors(options =>
         });
 });
 
-// --- SEÇÃO 2: REATIVADA ---
+// DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// --- SEÇÃO 3: REATIVADA ---
-// Configuração do Identity
+// Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     {
         options.Password.RequireDigit = false;
@@ -40,13 +39,31 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+// --- SEÇÃO 4: REATIVADA ---
+// Configuração do JWT Authentication
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.SaveToken = true;
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters()
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]))
+        };
+    });
+
 // --- SEÇÕES QUE PERMANECEM COMENTADAS ---
 /*
 builder.Services.AddScoped<IAnaliseService, AnaliseService>();
-
-// Configuração do JWT Authentication
-builder.Services.AddAuthentication(options => { ... })
-    .AddJwtBearer(options => { ... });
 */
 
 builder.Services.AddEndpointsApiExplorer();
@@ -72,13 +89,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseCors(myAllowSpecificOrigins);
 
-// --- MIDDLEWARES DE AUTENTICAÇÃO REATIVADOS ---
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 // Alteramos a mensagem de teste para refletir a etapa atual
-app.MapGet("/", () => "API QuiosqueBI - Teste com DBContext e Identity Ativos");
+app.MapGet("/", () => "API QuiosqueBI - Teste com DBContext, Identity e JWT Ativos");
 
 app.Run();
