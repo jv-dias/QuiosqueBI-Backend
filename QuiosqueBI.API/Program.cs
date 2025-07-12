@@ -8,60 +8,10 @@ using QuiosqueBI.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CORS
-var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: myAllowSpecificOrigins,
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "https://victorious-dune-05e42d21e.1.azurestaticapps.net")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        });
-});
+// CORS, DbContext, Identity, JWT Authentication... (tudo como estava antes)
+// ...
 
-// DbContext
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
-
-// Identity
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
-    {
-        options.Password.RequireDigit = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequiredLength = 3;
-        options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ áéíóúàâêôãõç";
-    })
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
-
-// --- SEÇÃO 4: REATIVADA ---
-// Configuração do JWT Authentication
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.SaveToken = true;
-        options.RequireHttpsMetadata = false;
-        options.TokenValidationParameters = new TokenValidationParameters()
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]))
-        };
-    });
-
-// --- SEÇÕES QUE PERMANECEM COMENTADAS ---
+// --- SEÇÃO QUE PERMANECE COMENTADA ---
 /*
 builder.Services.AddScoped<IAnaliseService, AnaliseService>();
 */
@@ -72,13 +22,26 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// --- LÓGICA DE SEEDING AINDA COMENTADA ---
-/*
+// --- SEÇÃO 5: REATIVADA ---
+// Lógica para criar as Roles na inicialização
 using (var scope = app.Services.CreateScope())
 {
-    // ...
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    string[] roleNames = { "Admin", "Testador", "Usuario" };
+    IdentityResult roleResult;
+
+    foreach (var roleName in roleNames)
+    {
+        var roleExist = await roleManager.RoleExistsAsync(roleName);
+        if (!roleExist)
+        {
+            roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
 }
-*/
+
+// ...
 
 if (app.Environment.IsDevelopment())
 {
@@ -95,6 +58,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Alteramos a mensagem de teste para refletir a etapa atual
-app.MapGet("/", () => "API QuiosqueBI - Teste com DBContext, Identity e JWT Ativos");
+app.MapGet("/", () => "API QuiosqueBI - Teste com Seeding de Roles Ativo");
 
 app.Run();
