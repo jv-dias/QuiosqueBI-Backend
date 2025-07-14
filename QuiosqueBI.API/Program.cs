@@ -117,4 +117,23 @@ app.MapGet("/debug-routes", (IEnumerable<EndpointDataSource> endpointSources) =>
     }));
 });
 
+// Adicione este bloco de diagnóstico antes da linha app.Run()
+
+app.MapGet("/debug-routes", (IEnumerable<EndpointDataSource> endpointSources) =>
+{
+    var endpoints = endpointSources
+        .SelectMany(es => es.Endpoints)
+        .OfType<RouteEndpoint>()
+        .OrderBy(e => e.RoutePattern.RawText);
+
+    return Results.Ok(endpoints.Select(e => new 
+    {
+        Name = e.DisplayName,
+        Route = e.RoutePattern.RawText,
+        Methods = string.Join(", ", e.Metadata.OfType<HttpMethodMetadata>().SelectMany(m => m.HttpMethods))
+    }));
+});
+
+app.Run();
+
 app.Run();
