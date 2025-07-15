@@ -82,7 +82,7 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection(); // Reativado, pois é uma boa prática de segurança em produção
+//app.UseHttpsRedirection(); 
 
 app.UseCors(myAllowSpecificOrigins);
 
