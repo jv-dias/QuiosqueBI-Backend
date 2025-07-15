@@ -4,43 +4,37 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
-using QuiosqueBI.API.Models; // Adicionado para garantir que ApplicationUser (se usado) seja encontrado
+using QuiosqueBI.API.Models;
 using QuiosqueBI.API.Services;
 
+try {
+    var builder = WebApplication.CreateBuilder(args);
 
-try{
-var builder = WebApplication.CreateBuilder(args);
+    // --- SEÇÃO DE SERVIÇOS ---
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+    builder.Services.AddScoped<IAnaliseService, AnaliseService>();
 
-// --- SEÇÃO DE SERVIÇOS ---
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IAnaliseService, AnaliseService>();
-
-// Configuração do CORS (Simplificada para Robustez)
-var myAllowSpecificOrigins = "_myAllowSpecificOrigins";
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: myAllowSpecificOrigins,
-        policy =>
+    // Configuração CORS melhorada para trabalhar com Azure
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(builder =>
         {
-            policy.WithOrigins(
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "https://victorious-dune-05e42d21e.1.azurestaticapps.net" 
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader()
+                   .WithExposedHeaders("Content-Disposition");
         });
-});
+    });
 
-// Configuração do Entity Framework Core
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    // Configuração do Entity Framework Core
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseNpgsql(connectionString));
 
-// Configuração do Identity
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
+    // Configuração do Identity
+    builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     {
         options.Password.RequireDigit = false;
         options.Password.RequireLowercase = false;
@@ -53,8 +47,8 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// Configuração do JWT Authentication
-builder.Services.AddAuthentication(options =>
+    // Configuração do JWT Authentication
+    builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -74,42 +68,62 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-var app = builder.Build();
+    var app = builder.Build();
 
-// --- SEÇÃO DE MIDDLEWARE E LÓGICA DE INICIALIZAÇÃO ---
+    // Habilitar Swagger em todos os ambientes
+    app.UseSwagger();
+    app.UseSwaggerUI();
 
-// Habilitar Swagger em todos os ambientes para facilitar testes no Azure
-app.UseSwagger();
-app.UseSwaggerUI();
+    // IMPORTANTE: CORS precisa vir ANTES do UseRouting e UseAuthentication
+    app.UseCors();
 
-//app.UseHttpsRedirection(); 
-
-app.UseCors(myAllowSpecificOrigins);
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-app.MapGet("/health", () => Results.Ok("Healthy")); 
-
-// Lógica de Migração e Seeding de Roles
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.Migrate();
-
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    string[] roleNames = { "Admin", "Testador", "Usuario" };
-    foreach (var roleName in roleNames)
+    // Registrar um middleware para diagnosticar requisições 404
+    app.Use(async (context, next) =>
     {
-        if (!await roleManager.RoleExistsAsync(roleName))
+        await next();
+        
+        // Se chegamos aqui com 404, logar detalhes para diagnóstico
+        if (context.Response.StatusCode == 404)
         {
-            await roleManager.CreateAsync(new IdentityRole(roleName));
+            Console.WriteLine($"404 Não Encontrado: {context.Request.Method} {context.Request.Path}");
+            
+            // Se for uma requisição OPTIONS (preflight CORS), retorna 200 com cabeçalhos CORS
+            if (context.Request.Method == "OPTIONS")
+            {
+                context.Response.StatusCode = 200;
+                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            }
+        }
+    });
+
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+    app.MapGet("/", () => "API QuiosqueBI funcionando! Acesse /swagger para documentação.");
+    app.MapGet("/health", () => Results.Ok("Healthy"));
+
+    // Lógica de Migração e Seeding de Roles
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        dbContext.Database.Migrate();
+
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        string[] roleNames = { "Admin", "Testador", "Usuario" };
+        foreach (var roleName in roleNames)
+        {
+            if (!await roleManager.RoleExistsAsync(roleName))
+            {
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
         }
     }
-}
 
-app.Run();
+    app.Run();
 }
 
 catch (Exception ex)
