@@ -7,6 +7,8 @@ using QuiosqueBI.API.Data;
 using QuiosqueBI.API.Models; // Adicionado para garantir que ApplicationUser (se usado) seja encontrado
 using QuiosqueBI.API.Services;
 
+
+try{
 var builder = WebApplication.CreateBuilder(args);
 
 // --- SEÇÃO DE SERVIÇOS ---
@@ -25,7 +27,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                 "http://localhost:5173",
                 "https://localhost:5173",
-                "https://victorious-dune-05e42d21e.1.azurestaticapps.net" // Apenas as URLs exatas
+                "https://victorious-dune-05e42d21e.1.azurestaticapps.net" 
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -108,3 +110,17 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+}
+
+catch (Exception ex)
+{
+    // Se QUALQUER exceção ocorrer durante a inicialização,
+    // nós criamos uma mini-API de emergência para exibir o erro.
+    var fallbackBuilder = WebApplication.CreateBuilder(args);
+    var fallbackApp = fallbackBuilder.Build();
+    fallbackApp.MapGet("/", () => Results.Problem(
+        detail: ex.ToString(), // O stack trace completo da exceção
+        title: "Erro Crítico na Inicialização da API"
+    ));
+    fallbackApp.Run();
+}
