@@ -1,0 +1,48 @@
+# Versão do Docker Compose
+version: '3.8'
+
+# Aqui definimos todos os nossos "eletrodomésticos" (serviços/contêineres)
+services:
+
+  # 1. O serviço do Banco de Dados
+  database:
+    image: postgres:latest  # Usa a imagem oficial mais recente do PostgreSQL
+    container_name: quiosquebi-db
+    environment:
+      # Define as variáveis de ambiente que o contêiner do Postgres usa para se inicializar
+      - POSTGRES_USER=admindb 
+      - POSTGRES_PASSWORD=792B32ED689E69diabos1B6192AC6D49BACAD55324E5AFDE5vermelhos49DECBFB82E24487EEB65 # Use uma senha forte, mas simples (alfanumérica)
+      - POSTGRES_DB=quiosquebi_db
+    ports:
+      # Mapeia a porta 5432 do seu computador para a porta 5432 do contêiner.
+      # Isso permite que você ainda se conecte com o pgAdmin para ver os dados.
+      - "5432:5432"
+    volumes:
+      # MUITO IMPORTANTE: Isso cria uma "pasta persistente" para os dados do banco.
+      # Sem isso, você perderia todos os dados ao parar o contêiner.
+      - postgres-data:/var/lib/postgresql/data
+
+  # 2. O serviço da nossa API .NET
+  backend-api:
+    container_name: quiosquebi-api-container
+    build:
+      context: . # Diz para ele construir a imagem a partir do Dockerfile na pasta atual
+      dockerfile: Dockerfile
+    ports:
+      # Mapeia a porta 7169 do seu computador para a porta 8080 de dentro do contêiner
+      - "7169:8080"
+    environment:
+      # Agora as configurações ficam aqui, de forma limpa e centralizada!
+      - ConnectionStrings__DefaultConnection=Server=database;Port=5432;Database=quiosquebi_db;User Id=admindb;Password=792B32ED689E69diabos1B6192AC6D49BACAD55324E5AFDE5vermelhos49DECBFB82E24487EEB65
+      - Jwt__SecretKey=792B32ED689E69diabos1B6192AC6D49BACAD55324E5AFDE5vermelhos49DECBFB82E24487EEB65
+      - Jwt__Issuer=http://localhost:7169
+      - Jwt__Audience=http://localhost:7169
+      - Gemini__ApiKey=AIzaSyCXDL2-Wkzcwosfg_PR0y8DNToDiozmqAY
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      # Garante que o contêiner da API só vai iniciar DEPOIS que o contêiner do banco de dados estiver pronto.
+      - database
+
+# Define o volume nomeado para persistir os dados do Postgres
+volumes:
+  postgres-data:
