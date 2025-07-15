@@ -35,8 +35,8 @@ services:
       # Agora as configurações ficam aqui, de forma limpa e centralizada!
       - ConnectionStrings__DefaultConnection=Server=database;Port=5432;Database=quiosquebi_db;User Id=admindb;Password=792B32ED689E69diabos1B6192AC6D49BACAD55324E5AFDE5vermelhos49DECBFB82E24487EEB65
       - Jwt__SecretKey=792B32ED689E69diabos1B6192AC6D49BACAD55324E5AFDE5vermelhos49DECBFB82E24487EEB65
-      - Jwt__Issuer=http://localhost:7169
-      - Jwt__Audience=http://localhost:7169
+      - Jwt__Issuer=quiosquebi-api.azurewebsites.net
+      - Jwt__Audience=quiosquebi-api.azurewebsites.net
       - Gemini__ApiKey=AIzaSyCXDL2-Wkzcwosfg_PR0y8DNToDiozmqAY
       - ASPNETCORE_URLS=http://+:8080
     depends_on:
