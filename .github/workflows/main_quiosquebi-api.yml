@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - quiosquebi-api
+name: Build and deploy container app to Azure Web App - quiosquebi-api
 
 on:
   push:
@@ -18,49 +18,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
         with:
-          dotnet-version: '8.x'
+          registry: quiosquebiregistry-eydtggd4exg2hqdr.azurecr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_61622F79E6B240AFAC36AAC364E54607 }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_037506667B55457AB62DC06B3507A220 }}
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
-
-      - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
         with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          context: .
+          push: true
+          tags: quiosquebiregistry-eydtggd4exg2hqdr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_61622F79E6B240AFAC36AAC364E54607 }}/quiosquebi-api-app:${{ github.sha }}
+          file: ./Dockerfile
 
   deploy:
     runs-on: ubuntu-latest
-    needs: build
-    
     permissions:
       id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
 
+    needs: build
+    
+
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: .net-app
       
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_702CFB6E296349EDA718D90035A3FEF9 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_9790AF260CBD49B489967BFDA59C3E2F }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1B1B09008FFE4F0799DB4323C02AC304 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_E21E014FEE63414DAABAB541CEAEACB4 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_4F41E8D4DB0C46F2B152E1EB4054ECAA }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_5085E528D8904837938068FCF2CB6BAE }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         with:
           app-name: 'quiosquebi-api'
           slot-name: 'Production'
-          package: .
+          images: 'quiosquebiregistry-eydtggd4exg2hqdr.azurecr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_61622F79E6B240AFAC36AAC364E54607 }}/quiosquebi-api-app:${{ github.sha }}'
           
