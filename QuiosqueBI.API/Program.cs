@@ -118,4 +118,5 @@ app.UseCors(myAllowSpecificOrigins);
 app.UseAuthentication(); // <-- Primeiro, verifica quem é o usuário
 app.UseAuthorization(); // <-- Depois, verifica o que ele pode fazer
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok("Healthy"));	
 app.Run();
