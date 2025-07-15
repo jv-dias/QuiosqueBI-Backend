@@ -9,6 +9,7 @@ using QuiosqueBI.API.Services;
 
 try {
     var builder = WebApplication.CreateBuilder(args);
+    var env = builder.Environment;
 
     // --- SEÇÃO DE SERVIÇOS ---
     builder.Services.AddControllers();
@@ -16,7 +17,7 @@ try {
     builder.Services.AddSwaggerGen();
     builder.Services.AddScoped<IAnaliseService, AnaliseService>();
 
-    // Configuração CORS melhorada para trabalhar com Azure
+    // Configuração CORS melhorada para trabalhar com Azure e ambiente de desenvolvimento
     builder.Services.AddCors(options =>
     {
         options.AddDefaultPolicy(builder =>
@@ -103,7 +104,7 @@ try {
     app.UseAuthorization();
 
     app.MapControllers();
-    app.MapGet("/", () => "API QuiosqueBI funcionando! Acesse /swagger para documentação.");
+    app.MapGet("/", () => "API QuiosqueBI funcionando!");
     app.MapGet("/health", () => Results.Ok("Healthy"));
 
     // Lógica de Migração e Seeding de Roles
