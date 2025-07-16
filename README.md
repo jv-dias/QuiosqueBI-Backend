@@ -1,137 +1,97 @@
-# QuiosqueBI - Análise de Dados com IA
+# QuiosqueBI - Backend API
 
-**⚠️ Importante:** Este é um projeto de **portfólio** criado para demonstrar habilidades em desenvolvimento Full-Stack com .NET e Vue.js, integração com APIs de Inteligência Artificial e implementação de sistemas de autenticação seguros.
+![C#](https://img.shields.io/badge/c%23-%23239120.svg?style=for-the-badge&logo=c-sharp&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+![Azure](https://img.shields.io/badge/azure-%230072C6.svg?style=for-the-badge&logo=microsoftazure&logoColor=white)
 
-O QuiosqueBI é uma aplicação web completa onde usuários podem se registrar, fazer o upload de arquivos de dados (CSV/XLSX), gerar análises visuais através de comandos em linguagem natural, e salvar ou revisitar seu histórico pessoal de forma segura.
+Este repositório contém o backend da aplicação **QuiosqueBI**, uma plataforma de análise de dados inteligente. A API foi construída com **.NET 8 (C#)** e é responsável por toda a lógica de negócio, incluindo autenticação de usuários, processamento de arquivos, integração com IA e persistência de dados.
+
+---
+
+> ### 🎨 **Frontend Interativo**
+> A interface desta aplicação foi construída com Vue.js 3 e está em um repositório separado.
+> **[Acesse o repositório do Frontend aqui](https://github.com/jv-dias/QuiosqueBI)**
 
 ---
 
-## Conceito Principal: O Fluxo de Análise
+## 🏛️ Arquitetura e Conceito
 
-O projeto combina uma arquitetura robusta com Inteligência Artificial para entregar uma experiência de usuário fluida e poderosa.
+O backend atua como o cérebro da aplicação. Ele segue uma arquitetura em camadas para garantir a separação de responsabilidades e a manutenibilidade. O fluxo principal é:
 
-1.  **Registro e Login:** O usuário cria uma conta segura. O sistema utiliza **ASP.NET Core Identity** para gerenciamento de usuários e **Tokens JWT** para autenticação, garantindo que cada sessão seja validada.
-2.  **Upload e Contexto:** Uma vez logado, o usuário envia um arquivo de dados e descreve seu objetivo de análise.
-3.  **Inteligência Artificial em Ação:** O backend em .NET envia os metadados do arquivo e o objetivo do usuário para a **API do Google Gemini**.
-4.  **Processamento e Visualização:** A IA retorna um plano de análise, que o backend executa para processar os dados e gerar os resultados visuais, que são então exibidos no frontend em Vue.js.
-5.  **Persistência e Histórico:** Os resultados da análise são associados ao usuário logado e salvos em um banco de dados **PostgreSQL**. O usuário pode revisitar suas análises a qualquer momento através de sua página de histórico pessoal e segura.
-
----
+1.  **Autenticação:** Valida usuários usando um sistema seguro com **ASP.NET Core Identity** e emite **Tokens JWT** para autorizar requisições.
+2.  **Recebimento de Dados:** Aceita o upload de arquivos (CSV/XLSX) e um contexto em linguagem natural do usuário.
+3.  **Integração com IA:** Envia os metadados do arquivo e o contexto do usuário para a **API do Google Gemini**, que gera um plano de análise dinâmico.
+4.  **Processamento e Persistência:** Executa o plano de análise, agregando e formatando os dados. Os resultados são então associados ao usuário autenticado e salvos em um banco de dados **PostgreSQL**.
+5.  **Serviço de Dados:** Expõe endpoints RESTful para o frontend consumir, tanto para gerar novas análises quanto para consultar análises históricas.
 
 ## 🚀 Stack de Tecnologias
 
-* **Backend:** API RESTful com **.NET 8**, **Entity Framework Core**, **ASP.NET Core Identity**.
-* **Banco de Dados:** **PostgreSQL**.
-* **Frontend:** Single Page Application (SPA) com **Vue 3** (Composition API) + Vite.
-* **Inteligência Artificial:** Google Gemini API.
-* **Autenticação:** Tokens **JWT (JSON Web Tokens)**.
-* **Estilização:** Tailwind CSS.
-* **Linguagens:** C#, TypeScript.
+* **Framework:** .NET 8, ASP.NET Core
+* **Linguagem:** C#
+* **Banco de Dados:** PostgreSQL
+* **ORM:** Entity Framework Core
+* **Autenticação:** ASP.NET Core Identity, JWT (JSON Web Tokens)
+* **Inteligência Artificial:** Google Gemini API
+* **Containerização:** Docker, Docker Compose
+* **Cloud:** Azure App Service, Azure Database for PostgreSQL
 
----
+## 🐳 Como Rodar Localmente com Docker
 
-## 📋 Pré-requisitos
+A maneira mais fácil e recomendada de rodar o ambiente de desenvolvimento é usando Docker. Isso garante um ambiente consistente e elimina a necessidade de instalar o PostgreSQL localmente.
 
-* [.NET 8.0 SDK](https://dotnet.microsoft.com/download)
-* [Node.js](https://nodejs.org/) (v18 ou superior)
-* [PostgreSQL](https://www.postgresql.org/download/) com um banco de dados criado (ex: `QuiosqueBI_DB`).
+### Pré-requisitos
+* [.NET 8 SDK](https://dotnet.microsoft.com/download)
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
----
+### Passos
 
-## ⚙️ Configuração Essencial
+1.  **Clone o repositório:**
+    ```sh
+    git clone [https://github.com/jv-dias/QuiosqueBI-Backend.git](https://github.com/jv-dias/QuiosqueBI-Backend.git)
+    cd QuiosqueBI-Backend
+    ```
 
-Para a aplicação funcionar corretamente, você precisa configurar as chaves da API, a conexão com o banco e o segredo do JWT.
-
-1.  Navegue até a pasta do backend: `cd backend`
-2.  Crie um arquivo chamado `appsettings.Development.json`.
-3.  Adicione as configurações abaixo, substituindo os valores de exemplo:
+2.  **Configure as Variáveis de Ambiente:**
+    Na pasta `QuiosqueBI.API`, crie um arquivo `appsettings.Development.json` e preencha com seus segredos. Este arquivo já está no `.gitignore` e não será enviado ao repositório.
 
     ```json
     {
-      "Logging": {
-        "LogLevel": {
-          "Default": "Information",
-          "Microsoft.AspNetCore": "Warning"
-        }
-      },
       "ConnectionStrings": {
-        "DefaultConnection": "Server=localhost;Port=5432;Database=QuiosqueBI_DB;User Id=postgres;Password=SUA_SENHA_DO_POSTGRES;"
+        "DefaultConnection": "Server=localhost;Port=5432;Database=quiosquebi_db;User Id=admindb;Password=sua_senha_forte_aqui"
       },
       "Gemini": {
-        "ApiKey": "SUA_CHAVE_API_DO_GEMINI_VAI_AQUI"
+        "ApiKey": "SUA_CHAVE_API_DO_GEMINI"
       },
       "Jwt": {
-        "SecretKey": "SUA_CHAVE_SECRETA_SUPER_LONGA_E_SEGURA_COM_MAIS_DE_256_BITS",
-        "Issuer": "https://localhost:5001",
-        "Audience": "https://localhost:5001"
+        "SecretKey": "SUA_CHAVE_SECRETA_SUPER_LONGA_E_SEGURA",
+        "Issuer": "http://localhost:5159",
+        "Audience": "http://localhost:5159"
       }
     }
     ```
+    *Nota: A senha do banco (`sua_senha_forte_aqui`) deve ser a mesma que você define no arquivo `docker-compose.yml`.*
 
----
-
-## ⚡ Como Rodar o Projeto
-
-Você precisará de dois terminais abertos, um para o backend e um para o frontend.
-
-### Backend (.NET API)
-
-1.  **Navegue até a pasta:**
+3.  **Inicie a Aplicação Completa:**
+    Na raiz do projeto (`QuiosqueBI-Backend`), execute um único comando:
     ```sh
-    cd backend
+    docker-compose up --build
     ```
-2.  **Restaure os pacotes do .NET:**
-    ```sh
-    dotnet restore
-    ```
-3.  **Execute as Migrations do Banco de Dados:** Este comando criará todas as tabelas, incluindo as do sistema de identidade.
-    ```sh
-    dotnet ef database update
-    ```
-4.  **Execute a API:**
-    ```sh
-    dotnet run
-    ```
+    Este comando irá:
+    * Construir a imagem Docker da sua API.
+    * Baixar e iniciar um contêiner do PostgreSQL.
+    * Criar o banco de dados e aplicar as migrações automaticamente.
+    * Iniciar sua API, que estará acessível em `http://localhost:5159`.
 
-### Frontend (Vue.js App)
+## ✨ Destaques da Arquitetura
 
-1.  **Navegue até a pasta:**
-    ```sh
-    cd frontend
-    ```
-2.  **Instale as dependências:**
-    ```sh
-    npm install
-    ```
-3.  **Execute o servidor de desenvolvimento:**
-    ```sh
-    npm run dev
-    ```
-4.  Acesse a aplicação no seu navegador em `http://localhost:5173`.
-
----
-
-## ✨ Funcionalidades Principais
-
-* **Autenticação e Autorização Completas:** Sistema de registro e login seguro com **ASP.NET Core Identity** e **JWT**. Cada usuário só pode acessar seus próprios dados.
-* **Análise via IA Generativa:** Utiliza a API do Google Gemini para interpretar comandos em linguagem natural e gerar planos de análise dinâmicos.
-* **Persistência de Dados com Histórico Pessoal:** Salva os resultados de cada análise em um banco de dados PostgreSQL e permite que o usuário visualize seu histórico de forma segura.
-* **Otimização para Arquivos Grandes:** Suporta `.csv` e `.xlsx` e utiliza técnicas de **streaming** para analisar arquivos com mais de 20.000 linhas com baixo consumo de memória.
-* **Interface Reativa e Moderna:** Frontend construído com Vue 3, TypeScript e Pinia, com uma UI elegante e responsiva que se adapta ao estado de autenticação do usuário.
-
----
-
-## 🗺️ Roadmap Futuro
-
-Abaixo estão algumas funcionalidades e melhorias planejadas para futuras versões:
-
-* **Login Social (OAuth 2.0):** Implementar a opção de "Login com Google" para facilitar o acesso de novos usuários.
-* **Painel Administrativo:** Criar uma área restrita para usuários com a role "Admin", permitindo o gerenciamento de usuários.
-* **Refinamento dos Gráficos:** Adicionar mais opções de customização e tipos de gráficos para o usuário.
-* **Implantação e Acesso Público (Deployment):** Configurar pipelines de CI/CD para automatizar o deploy e hospedar a aplicação em uma plataforma de nuvem (Azure, AWS, etc.).
-
----
+* **Pronto para a Nuvem:** O projeto foi containerizado com Docker e implantado no **Azure**, utilizando **Azure Container Apps** para o serviço da API e **Azure Database for PostgreSQL** como banco de dados gerenciado.
+* **CI/CD Automatizado:** A implantação no Azure é gerenciada por um pipeline de CI/CD com **GitHub Actions**, que constrói a imagem Docker e a publica no **Azure Container Registry (ACR)** a cada `push` na branch `main`.
+* **Segurança Robusta:** Sistema completo de autenticação e autorização, garantindo que cada usuário acesse apenas seus próprios dados.
+* **Processamento Otimizado:** Uso de técnicas de streaming para analisar arquivos grandes (+20.000 linhas) com baixo consumo de memória.
+* **Arquitetura Limpa:** A lógica de negócio é desacoplada da camada de API através de um Service Layer, seguindo os princípios de injeção de dependência.
 
 ## 📜 Licença
 
-Este projeto é de código aberto para fins educacionais e de portfólio, sob a licença MIT.
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE.md) para mais detalhes.
