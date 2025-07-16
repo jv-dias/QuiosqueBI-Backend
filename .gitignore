@@ -52,3 +52,7 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Sensitive files
+/QuiosqueBI.API/appsettings.json
+/QuiosqueBI.API/appsettings.Development.json
