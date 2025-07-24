@@ -1,32 +1,58 @@
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using QuiosqueBI.API.Models;
+using QuiosqueBI.API.Data;
 using CsvHelper;
 using CsvHelper.Configuration;
 using ExcelDataReader;
-using Microsoft.AspNetCore.Http;
 using Mscc.GenerativeAI;
-using QuiosqueBI.API.Models;
 using System.Dynamic;
 using System.Globalization;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using QuiosqueBI.API.Data;
+using System.Security.Claims;
 
-namespace QuiosqueBI.API.Services
+namespace QuiosqueBI.API.Features.Analises;
+
+public static class UploadAnalise
 {
-    public class AnaliseService : IAnaliseService
+    public record Command(IFormFile Arquivo, string Contexto, ClaimsPrincipal User) : IRequest<IActionResult>;
+
+    public class Handler : IRequestHandler<Command, IActionResult>
     {
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
 
-        public AnaliseService(IConfiguration configuration, ApplicationDbContext context)
+        public Handler(IConfiguration configuration, ApplicationDbContext context)
         {
             _configuration = configuration;
             _context = context;
         }
 
-        // MÉTODO PÚBLICO PRINCIPAL
-        public async Task<List<ResultadoGrafico>> GerarResultadosAnaliseAsync(IFormFile arquivo, string contexto, string userId)
+        public async Task<IActionResult> Handle(Command request, CancellationToken cancellationToken)
         {
-            // O "processador" é uma função anônima (lambda) que contém a lógica de negócio.
+            var userId = request.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            
+            if (userId == null)
+            {
+                return new UnauthorizedObjectResult("Usuário não autenticado.");
+            }
+
+            try
+            {
+                var resultadosFinais = await GerarResultadosAnaliseAsync(request.Arquivo, request.Contexto, userId);
+                return new OkObjectResult(new { Resultados = resultadosFinais });
+            }
+            catch (Exception ex)
+            {
+                return new ObjectResult($"Ocorreu um erro interno: {ex.Message}")
+                {
+                    StatusCode = 500
+                };
+            }
+        }
+
+        private async Task<List<ResultadoGrafico>> GerarResultadosAnaliseAsync(IFormFile arquivo, string contexto, string userId)
+        {
             var processador = async (DadosArquivo.RDadosArquivo dadosArquivo) =>
             {
                 var planoDeAnalise = await ObterPlanoDeAnaliseAsync(dadosArquivo.Headers, contexto);
@@ -84,7 +110,6 @@ namespace QuiosqueBI.API.Services
                         });
                     }
 
-                    // Salvar os resultados no banco de dados
                     await SalvarResultadosNoBancoAsync(resultadosFinais, contexto, userId);
                 }
                 return resultadosFinais;
@@ -93,7 +118,6 @@ namespace QuiosqueBI.API.Services
             return await ProcessarArquivoStreamAsync(arquivo, processador);
         }
 
-        // Método auxiliar para salvar resultados no banco
         private async Task SalvarResultadosNoBancoAsync(List<ResultadoGrafico> resultados, string contexto, string userId)
         {
             if (resultados.Any())
@@ -105,45 +129,24 @@ namespace QuiosqueBI.API.Services
                     ResultadosJson = JsonSerializer.Serialize(resultados),
                     UserId = userId
                 };
-                await SalvarAnalise(analiseSalva);
+                
+                _context.AnalisesSalvas.Add(analiseSalva);
+                await _context.SaveChangesAsync();
             }
         }
 
-        // MÉTODO PÚBLICO DE DEBUG
-        public async Task<DebugData> GerarDadosDebugAsync(IFormFile arquivo, string contexto)
-        {
-            var processador = async (DadosArquivo.RDadosArquivo dadosArquivo) =>
-            {
-                var planoDeAnalise = await ObterPlanoDeAnaliseAsync(dadosArquivo.Headers, contexto);
-                return new DebugData
-                {
-                    CabecalhosDoArquivo = dadosArquivo.Headers,
-                    DadosBrutosDoArquivo = dadosArquivo.Records.Take(10).ToList(), // Pega só os 10 primeiros
-                    PlanoDaIA = planoDeAnalise
-                };
-            };
-
-            return await ProcessarArquivoStreamAsync(arquivo, processador);
-        }
-
-        // ===================================================================
-        // NOVO MÉTODO CENTRAL PARA LEITURA EM STREAMING
-        // ===================================================================
         private async Task<T> ProcessarArquivoStreamAsync<T>(IFormFile arquivo, Func<DadosArquivo.RDadosArquivo, Task<T>> processador)
         {
-            // Abre o stream do arquivo que será usado por qualquer um dos leitores
             await using var stream = arquivo.OpenReadStream();
             var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
 
             if (extensao == ".xlsx")
             {
-                // Garante o suporte a codificações de planilhas antigas
                 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-                // O bloco 'using' garante que o leitor permanecerá aberto durante o processamento
                 using var reader = ExcelReaderFactory.CreateReader(stream);
 
-                reader.Read(); // Lê a primeira linha para obter os cabeçalhos
+                reader.Read();
                 var headerList = new List<string>();
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
@@ -151,14 +154,11 @@ namespace QuiosqueBI.API.Services
                 }
                 var headers = headerList.ToArray();
 
-                // Cria o IEnumerable "preguiçoso" para ler as linhas sob demanda
                 var records = LerLinhasExcel(reader, headers);
 
-                // *** PONTO CRÍTICO DA CORREÇÃO ***
-                // Executa o processador AQUI DENTRO do bloco 'using', garantindo que o 'reader' está vivo.
                 return await processador(new DadosArquivo.RDadosArquivo(headers, records));
             }
-            else // Somente para CSV
+            else
             {
                 using var reader = new StreamReader(stream);
                 var linhas = new List<string>();
@@ -193,12 +193,10 @@ namespace QuiosqueBI.API.Services
                 {
                     expando[headers[i]] = reader.GetValue(i);
                 }
-                yield return expando; // Retorna uma linha de cada vez (streaming)
+                yield return expando;
             }
         }
 
-        // ... (Seus outros métodos privados: ObterPlanoDeAnaliseAsync, ConverterStringParaDecimal, TentarConverterParaData)
-        // Eles permanecem os mesmos.
         private async Task<List<AnaliseSugerida>?> ObterPlanoDeAnaliseAsync(string[] headers, string contexto)
         {
             var apiKey = _configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Chave da API do Gemini não configurada.");
@@ -250,28 +248,6 @@ namespace QuiosqueBI.API.Services
                 return dt;
             }
             return DateTime.MinValue;
-        }
-
-        public async Task<List<AnaliseSalva>> ListarAnalisesSalvasAsync(string userId)
-        {
-            // Adiciona a cláusula .Where() para filtrar apenas as análises do usuário logado
-            return await _context.AnalisesSalvas
-                .Where(a => a.UserId == userId)
-                .OrderByDescending(a => a.DataCriacao)
-                .ToListAsync();
-        }
-
-        public async Task SalvarAnalise(AnaliseSalva analise)
-        {
-            _context.AnalisesSalvas.Add(analise);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<AnaliseSalva?> ObterAnaliseSalvaPorIdAsync(int id, string userId)
-        {
-            // Busca pelo Id da análise E verifica se o UserId corresponde ao do usuário logado
-            return await _context.AnalisesSalvas
-                .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
         }
     }
 }
