@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using QuiosqueBI.API.Services;
-using System.Security.Claims;
+using MediatR;
+using QuiosqueBI.API.Features.Analises;
 
 namespace QuiosqueBI.API.Controllers;
 
@@ -10,11 +10,11 @@ namespace QuiosqueBI.API.Controllers;
 [Route("api/[controller]")]
 public class AnaliseController : ControllerBase
 {
-    private readonly IAnaliseService _analiseService;
+    private readonly IMediator _mediator;
 
-    public AnaliseController(IAnaliseService analiseService)
+    public AnaliseController(IMediator mediator)
     {
-        _analiseService = analiseService;
+        _mediator = mediator;
     }
 
     // Rota para upload de arquivo e geração de resultados
@@ -24,23 +24,8 @@ public class AnaliseController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Upload(IFormFile arquivo, [FromForm] string contexto)
     {
-        // Pega o ID do usuário a partir das 'claims' do token JWT
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (arquivo == null || arquivo.Length == 0)
-        {
-            return BadRequest("Nenhum arquivo enviado.");
-        }
-
-        try
-        {
-            var resultadosFinais = await _analiseService.GerarResultadosAnaliseAsync(arquivo, contexto, userId);
-            return Ok(new { Resultados = resultadosFinais });
-        }
-        catch (Exception ex)
-        {
-            // O ideal é logar o ex.StackTrace, não retorná-lo para o cliente
-            return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
-        }
+        var command = new UploadAnalise.Command(arquivo, contexto, User);
+        return await _mediator.Send(command);
     }
 
     // Rota para depuração, que retorna dados brutos e sugestões da IA
@@ -50,20 +35,8 @@ public class AnaliseController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetDebugData(IFormFile arquivo, [FromForm] string contexto)
     {
-        if (arquivo == null || arquivo.Length == 0)
-        {
-            return BadRequest("Nenhum arquivo enviado.");
-        }
-
-        try
-        {
-            var debugData = await _analiseService.GerarDadosDebugAsync(arquivo, contexto);
-            return Ok(debugData);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Ocorreu um erro interno na rota de depuração: {ex.Message}");
-        }
+        var query = new DebugAnalise.Query(arquivo, contexto);
+        return await _mediator.Send(query);
     }
 
     // Rota para listar análises salvas
@@ -72,48 +45,15 @@ public class AnaliseController : ControllerBase
     [HttpGet("historico")]
     public async Task<IActionResult> ListarHistorico()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Unauthorized("Não foi possível identificar o usuário.");
-        }
-
-        try
-        {
-            var historico = await _analiseService.ListarAnalisesSalvasAsync(userId);
-            return Ok(historico);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
-        }
+        var query = new ListarHistorico.Query(User);
+        return await _mediator.Send(query);
     }
 
     // Rota para obter uma análise salva por ID
     [HttpGet("historico/{id}")]
     public async Task<IActionResult> ObterHistoricoPorId(int id)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(userId))
-        {
-            return Unauthorized("Não foi possível identificar o usuário.");
-        }
-
-        try
-        {
-            var analise = await _analiseService.ObterAnaliseSalvaPorIdAsync(id, userId);
-
-            if (analise == null)
-            {
-                // Retorna 404 Not Found tanto se o ID não existir quanto se não pertencer ao usuário.
-                return NotFound();
-            }
-
-            return Ok(analise);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
-        }
+        var query = new ObterAnalisePorId.Query(id, User);
+        return await _mediator.Send(query);
     }
 }

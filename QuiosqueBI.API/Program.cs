@@ -1,11 +1,12 @@
 using System.Text;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
 using QuiosqueBI.API.Models;
-using QuiosqueBI.API.Services;
+using QuiosqueBI.API.Common.Behaviors;
 
 try {
     var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +16,14 @@ try {
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    builder.Services.AddScoped<IAnaliseService, AnaliseService>();
+    
+    // Registrar MediatR
+    builder.Services.AddMediatR(cfg => 
+    {
+        cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    });
+    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(QuiosqueBI.API.Common.Behaviors.PerformanceBehavior<,>));
+    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(QuiosqueBI.API.Common.Behaviors.ValidationBehavior<,>));
 
     // Configuração CORS melhorada para trabalhar com Azure e ambiente de desenvolvimento
     builder.Services.AddCors(options =>
