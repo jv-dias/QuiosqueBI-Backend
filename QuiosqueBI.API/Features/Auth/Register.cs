@@ -23,11 +23,23 @@ public static class Register
             if (userExists != null)
                 return new ConflictObjectResult(new { Message = "Usuário já existe!" });
 
+            // Gera o UserName base
+            var baseUserName = $"{request.Nome}-{request.Sobrenome}";
+            var userName = baseUserName;
+            int suffix = 1;
+
+            // Garante unicidade do UserName adicionando um número se necessário
+            while (await _userManager.FindByNameAsync(userName) != null)
+            {
+                userName = $"{baseUserName}{suffix}";
+                suffix++;
+            }
+
             var user = new IdentityUser()
             {
                 Email = request.Email,
                 SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = $"{request.Nome}-{request.Sobrenome}"
+                UserName = userName
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
