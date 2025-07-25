@@ -5,8 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
-using QuiosqueBI.API.Models;
-using QuiosqueBI.API.Common.Behaviors;
+
 
 try {
     var builder = WebApplication.CreateBuilder(args);

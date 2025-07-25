@@ -210,7 +210,7 @@ public static class UploadAnalise
                                Sua tarefa é agir como um motor de análise de dados. Você receberá um objetivo e uma lista de colunas com seus respectivos índices numéricos. Sua resposta DEVE usar os índices.
                                O objetivo da análise do usuário é: '{{contexto}}'.
                                A lista de colunas e seus índices disponíveis é: {{{colunasComIndices}}}.
-                               Com base no objetivo e nas colunas, sugira até 5 análises relevantes de dimensão e métrica. Para cada sugestão, forneça o índice numérico da coluna de dimensão e o índice numérico da coluna de métrica.
+                               Com base no objetivo e nas colunas, sugira até 10 análises relevantes de dimensão e métrica. Para cada sugestão, forneça o índice numérico da coluna de dimensão e o índice numérico da coluna de métrica.
                                Responda APENAS com um objeto JSON válido no formato:
                                [
                                  { "titulo_grafico": "...", "tipo_grafico": "barras|linha|pizza", "indice_dimensao": <numero>, "indice_metrica": <numero> }
