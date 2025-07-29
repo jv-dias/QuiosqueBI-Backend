@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using QuiosqueBI.API.Features.Auth;
-
+using QuiosqueBI.API.Services;
 
 // DTOs (Data Transfer Objects) para receber os dados do frontend
 public record RegisterDto(string Nome, string Sobrenome, string Email, string Password);
@@ -11,24 +9,22 @@ public record LoginDto(string Email, string Password);
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IAuthService _authService;
 
-    public AuthController(IMediator mediator)
+    public AuthController(IAuthService authService)
     {
-        _mediator = mediator;
+        _authService = authService;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
-        var command = new Register.Command(model.Nome, model.Sobrenome, model.Email, model.Password);
-        return await _mediator.Send(command);
+        return await _authService.RegisterAsync(model.Nome, model.Sobrenome, model.Email, model.Password);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
-        var command = new Login.Command(model.Email, model.Password);
-        return await _mediator.Send(command);
+        return await _authService.LoginAsync(model.Email, model.Password);
     }
 }

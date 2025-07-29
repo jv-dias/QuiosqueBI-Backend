@@ -1,13 +1,18 @@
 using System.Text;
-using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
+using QuiosqueBI.API.Services;
+using QuiosqueBI.API.Services.Analise;
+using QuiosqueBI.API.Services.Analise.Fase1_Coleta;
+using QuiosqueBI.API.Services.Analise.Fase3_Exploracao;
+using QuiosqueBI.API.Services.Analise.Fase5_Persistencia;
 
 
-try {
+try
+{
     var builder = WebApplication.CreateBuilder(args);
     var env = builder.Environment;
 
@@ -15,15 +20,17 @@ try {
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    
-    // Registrar MediatR
-    builder.Services.AddMediatR(cfg => 
-    {
-        cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
-    });
-    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(QuiosqueBI.API.Common.Behaviors.PerformanceBehavior<,>));
-    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(QuiosqueBI.API.Common.Behaviors.ValidationBehavior<,>));
 
+    // Registrar Services
+    //builder.Services.AddScoped<IAnaliseService, AnaliseService>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    
+    // Registrar novos serviços de análise e seu orquestrador.
+    builder.Services.AddScoped<IAnaliseOrquestradorService, AnaliseOrquestradorService>();
+    builder.Services.AddScoped<IColetaService, ColetaService>();
+    builder.Services.AddScoped<IExploracaoService, ExploracaoService>();
+    builder.Services.AddScoped<IPersistenciaService, PersistenciaService>();
+    
     // Configuração CORS melhorada para trabalhar com Azure e ambiente de desenvolvimento
     builder.Services.AddCors(options =>
     {
@@ -89,12 +96,12 @@ try {
     app.Use(async (context, next) =>
     {
         await next();
-        
+
         // Se chegamos aqui com 404, logar detalhes para diagnóstico
         if (context.Response.StatusCode == 404)
         {
             Console.WriteLine($"404 Não Encontrado: {context.Request.Method} {context.Request.Path}");
-            
+
             // Se for uma requisição OPTIONS (preflight CORS), retorna 200 com cabeçalhos CORS
             if (context.Request.Method == "OPTIONS")
             {
