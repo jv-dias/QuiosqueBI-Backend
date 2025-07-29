@@ -1,59 +1,65 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using QuiosqueBI.API.Features.Analises;
+using QuiosqueBI.API.Services.Analise;
 
-namespace QuiosqueBI.API.Controllers;
-
-[Authorize]
-[ApiController]
-[Route("api/[controller]")]
-public class AnaliseController : ControllerBase
+namespace QuiosqueBI.API.Controllers
 {
-    private readonly IMediator _mediator;
-
-    public AnaliseController(IMediator mediator)
+    [Authorize] // Protege todos os endpoints neste controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AnaliseController : ControllerBase
     {
-        _mediator = mediator;
-    }
+        private readonly IAnaliseOrquestradorService _orquestradorService;
 
-    // Rota para upload de arquivo e geração de resultados
-    [HttpPost("upload")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> Upload(IFormFile arquivo, [FromForm] string contexto)
-    {
-        var command = new UploadAnalise.Command(arquivo, contexto, User);
-        return await _mediator.Send(command);
-    }
+        public AnaliseController(IAnaliseOrquestradorService orquestradorService)
+        {
+            _orquestradorService = orquestradorService;
+        }
 
-    // Rota para depuração, que retorna dados brutos e sugestões da IA
-    [HttpPost("debug")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetDebugData(IFormFile arquivo, [FromForm] string contexto)
-    {
-        var query = new DebugAnalise.Query(arquivo, contexto);
-        return await _mediator.Send(query);
-    }
+        [HttpPost("upload")]
+        public async Task<IActionResult> Upload(IFormFile arquivo, [FromForm] string contexto)
+        {
+            try
+            {
+                var resultados = await _orquestradorService.ExecutarAnaliseCompletaAsync(arquivo, contexto, User);
+                return Ok(new { Resultados = resultados });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
+            }
+        }
 
-    // Rota para listar análises salvas
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [HttpGet("historico")]
-    public async Task<IActionResult> ListarHistorico()
-    {
-        var query = new ListarHistorico.Query(User);
-        return await _mediator.Send(query);
-    }
+        [HttpGet("historico")]
+        public async Task<IActionResult> ListarHistorico()
+        {
+            try
+            {
+                var historico = await _orquestradorService.ListarHistoricoAsync(User);
+                return Ok(historico);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
+            }
+        }
 
-    // Rota para obter uma análise salva por ID
-    [HttpGet("historico/{id}")]
-    public async Task<IActionResult> ObterHistoricoPorId(int id)
-    {
-        var query = new ObterAnalisePorId.Query(id, User);
-        return await _mediator.Send(query);
+        [HttpGet("historico/{id}")]
+        public async Task<IActionResult> ObterAnalisePorId(int id)
+        {
+            try
+            {
+                var analise = await _orquestradorService.ObterAnalisePorIdAsync(id, User);
+                if (analise == null)
+                {
+                    return NotFound();
+                }
+                return Ok(analise);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Ocorreu um erro interno: {ex.Message}");
+            }
+        }
     }
 }
