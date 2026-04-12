@@ -4,7 +4,7 @@ using QuiosqueBI.API.Services.Analise;
 
 namespace QuiosqueBI.API.Controllers
 {
-    [Authorize] // Protege todos os endpoints neste controller
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class AnaliseController : ControllerBase
