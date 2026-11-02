@@ -56,3 +56,8 @@ nunit-*.xml
 # Sensitive files
 /QuiosqueBI.API/appsettings.json
 /QuiosqueBI.API/appsettings.Development.json
+.vs/
+
+# AI Agent Rules & Configuration
+[Aa]gents.md
+.agents/

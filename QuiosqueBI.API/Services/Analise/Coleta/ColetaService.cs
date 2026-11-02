@@ -5,7 +5,7 @@ using QuiosqueBI.API.Models;
 using System.Dynamic;
 using System.Globalization;
 
-namespace QuiosqueBI.API.Services.Analise.Fase1_Coleta
+namespace QuiosqueBI.API.Services.Analise.Coleta
 {
     public class ColetaService : IColetaService
     {

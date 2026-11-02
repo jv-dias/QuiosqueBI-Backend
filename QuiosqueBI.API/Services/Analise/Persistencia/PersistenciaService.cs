@@ -2,7 +2,7 @@ using QuiosqueBI.API.Data;
 using QuiosqueBI.API.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace QuiosqueBI.API.Services.Analise.Fase5_Persistencia
+namespace QuiosqueBI.API.Services.Analise.Persistencia
 {
 	public class PersistenciaService : IPersistenciaService
 	{

@@ -1,6 +1,6 @@
 using QuiosqueBI.API.Models;
 
-namespace QuiosqueBI.API.Services.Analise.Fase1_Coleta
+namespace QuiosqueBI.API.Services.Analise.Coleta
 {
 	public interface IColetaService
 	{

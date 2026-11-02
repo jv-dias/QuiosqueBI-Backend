@@ -3,7 +3,7 @@ using QuiosqueBI.API.Models;
 using System.Globalization;
 using System.Text.Json;
 
-namespace QuiosqueBI.API.Services.Analise.Fase3_Exploracao
+namespace QuiosqueBI.API.Services.Analise.Exploracao
 {
     public class ExploracaoService : IExploracaoService
     {
