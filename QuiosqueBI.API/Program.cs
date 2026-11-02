@@ -9,6 +9,7 @@ using QuiosqueBI.API.Services.Analise;
 using QuiosqueBI.API.Services.Analise.Coleta;
 using QuiosqueBI.API.Services.Analise.Exploracao;
 using QuiosqueBI.API.Services.Analise.Persistencia;
+using QuiosqueBI.API.Services.Analise.Preparacao;
 
 
 try
@@ -28,6 +29,7 @@ try
     // Registrar novos serviços de análise e seu orquestrador.
     builder.Services.AddScoped<IAnaliseOrquestradorService, AnaliseOrquestradorService>();
     builder.Services.AddScoped<IColetaService, ColetaService>();
+    builder.Services.AddScoped<IPreparacaoService, PreparacaoService>();
     builder.Services.AddScoped<IExploracaoService, ExploracaoService>();
     builder.Services.AddScoped<IPersistenciaService, PersistenciaService>();
     

@@ -1,5 +1,6 @@
 using Mscc.GenerativeAI;
 using QuiosqueBI.API.Models;
+using QuiosqueBI.API.Services.Analise.Preparacao;
 using System.Globalization;
 using System.Text.Json;
 
@@ -8,10 +9,12 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
     public class ExploracaoService : IExploracaoService
     {
         private readonly IConfiguration _configuration;
+        private readonly IPreparacaoService _preparacaoService;
 
-        public ExploracaoService(IConfiguration configuration)
+        public ExploracaoService(IConfiguration configuration, IPreparacaoService preparacaoService)
         {
             _configuration = configuration;
+            _preparacaoService = preparacaoService;
         }
 
         public async Task<List<ResultadoGrafico>> GerarInsightsIniciaisAsync(DadosArquivo.RDadosArquivo dadosDoArquivo, string contexto)
@@ -24,8 +27,6 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
                 var recordsList = dadosDoArquivo.Records.ToList();
                 foreach (var analise in planoDeAnalise)
                 {
-                    // ... (Toda a sua lógica de GroupBy, Sum, Ordenação e formatação de datas
-                    // que estava no seu AnaliseService antigo vai aqui) ...
                     var cabecalhoDimensaoReal = dadosDoArquivo.Headers[analise.indice_dimensao];
                     var cabecalhoMetricaReal = dadosDoArquivo.Headers[analise.indice_metrica];
 
@@ -35,11 +36,11 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
                         .Select(g => new
                         {
                             Categoria = g.Key,
-                            Valor = g.Sum(rec => ConverterStringParaDecimal(Convert.ToString(((IDictionary<string, object>)rec)[cabecalhoMetricaReal])))
+                            Valor = g.Sum(rec => _preparacaoService.ConverterParaDecimal(((IDictionary<string, object>)rec)[cabecalhoMetricaReal]))
                         })
                         .ToList();
 
-                     if (cabecalhoDimensaoReal.ToLower().Contains("data"))
+                    if (cabecalhoDimensaoReal.ToLower().Contains("data"))
                     {
                         // ... Lógica de ordenação e formatação de datas ...
                     }
@@ -90,20 +91,7 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
 
             return JsonSerializer.Deserialize<List<AnaliseSugerida>>(jsonPlanoAnalise, opcoesJson);
         }
-        
-        private decimal ConverterStringParaDecimal(string? stringValue)
-        {
-            if (string.IsNullOrEmpty(stringValue)) return 0m;
 
-            string cleanString = stringValue.Replace("R$", "").Trim().Replace(",", ".");
-
-            if (decimal.TryParse(cleanString, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal parsedValue))
-            {
-                return parsedValue;
-            }
-            return 0m;
-        }
-        
         private DateTime TentarConverterParaData(object valorCategoria)
         {
             if (DateTime.TryParse(Convert.ToString(valorCategoria), new CultureInfo("pt-BR"), DateTimeStyles.None, out DateTime dt))
