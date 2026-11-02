@@ -1,5 +1,6 @@
 using Mscc.GenerativeAI;
 using QuiosqueBI.API.Models;
+using QuiosqueBI.API.Services.Analise.Exploracao.Profiling;
 using QuiosqueBI.API.Services.Analise.Preparacao;
 using System.Globalization;
 using System.Text.Json;
@@ -10,15 +11,23 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
     {
         private readonly IConfiguration _configuration;
         private readonly IPreparacaoService _preparacaoService;
+        private readonly IProfilingService _profilingService;
 
-        public ExploracaoService(IConfiguration configuration, IPreparacaoService preparacaoService)
+        public ExploracaoService(
+            IConfiguration configuration,
+            IPreparacaoService preparacaoService,
+            IProfilingService profilingService)
         {
             _configuration = configuration;
             _preparacaoService = preparacaoService;
+            _profilingService = profilingService;
         }
 
         public async Task<List<ResultadoGrafico>> GerarInsightsIniciaisAsync(DadosArquivo.RDadosArquivo dadosDoArquivo, string contexto)
         {
+            // Descoberta de metadados e perfilamento semântico prévio
+            var perfilColunas = _profilingService.AnalisarColunas(dadosDoArquivo);
+
             var planoDeAnalise = await ObterPlanoDeAnaliseAsync(dadosDoArquivo.Headers, contexto);
             var resultadosFinais = new List<ResultadoGrafico>();
 
@@ -60,7 +69,6 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
             return resultadosFinais;
         }
 
-        // Os métodos privados que dão suporte à análise também são movidos para cá
         private async Task<List<AnaliseSugerida>?> ObterPlanoDeAnaliseAsync(string[] headers, string contexto)
         {
             var apiKey = _configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Chave da API do Gemini não configurada.");

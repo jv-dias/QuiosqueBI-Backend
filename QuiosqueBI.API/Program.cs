@@ -10,6 +10,7 @@ using QuiosqueBI.API.Services.Analise.Coleta;
 using QuiosqueBI.API.Services.Analise.Exploracao;
 using QuiosqueBI.API.Services.Analise.Persistencia;
 using QuiosqueBI.API.Services.Analise.Preparacao;
+using QuiosqueBI.API.Services.Analise.Exploracao.Profiling;
 
 
 try
@@ -30,6 +31,7 @@ try
     builder.Services.AddScoped<IAnaliseOrquestradorService, AnaliseOrquestradorService>();
     builder.Services.AddScoped<IColetaService, ColetaService>();
     builder.Services.AddScoped<IPreparacaoService, PreparacaoService>();
+    builder.Services.AddScoped<IProfilingService, ProfilingService>();
     builder.Services.AddScoped<IExploracaoService, ExploracaoService>();
     builder.Services.AddScoped<IPersistenciaService, PersistenciaService>();
     
