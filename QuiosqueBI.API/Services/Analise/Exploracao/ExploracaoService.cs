@@ -1,9 +1,11 @@
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Mscc.GenerativeAI;
 using QuiosqueBI.API.Models;
 using QuiosqueBI.API.Services.Analise.Exploracao.Profiling;
 using QuiosqueBI.API.Services.Analise.Preparacao;
-using System.Globalization;
-using System.Text.Json;
 
 namespace QuiosqueBI.API.Services.Analise.Exploracao
 {
@@ -28,7 +30,7 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
             // Descoberta de metadados e perfilamento semântico prévio
             var perfilColunas = _profilingService.AnalisarColunas(dadosDoArquivo);
 
-            var planoDeAnalise = await ObterPlanoDeAnaliseAsync(dadosDoArquivo.Headers, contexto);
+            var planoDeAnalise = await ObterPlanoDeAnaliseAsync(dadosDoArquivo.Headers, perfilColunas, contexto);
             var resultadosFinais = new List<ResultadoGrafico>();
 
             if (planoDeAnalise != null)
@@ -69,23 +71,64 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
             return resultadosFinais;
         }
 
-        private async Task<List<AnaliseSugerida>?> ObterPlanoDeAnaliseAsync(string[] headers, string contexto)
+        private async Task<List<AnaliseSugerida>?> ObterPlanoDeAnaliseAsync(
+            string[] headers,
+            List<PerfilColuna> perfilColunas,
+            string contexto)
         {
             var apiKey = _configuration["Gemini:ApiKey"] ?? throw new InvalidOperationException("Chave da API do Gemini não configurada.");
 
             var googleAi = new GoogleAI(apiKey);
             var model = googleAi.GenerativeModel(Model.Gemini25Flash);
 
-            var colunasComIndices = string.Join(", ", headers.Select((h, i) => $"'{i}': '{h}'"));
+            // Serialização compacta em marcadores semânticos para economia de tokens
+            var linhasMetadados = new StringBuilder();
+            foreach (var perfil in perfilColunas)
+            {
+                var papelSemantico = perfil.TipoSemantico switch
+                {
+                    TipoSemanticoColuna.NumericoMonetario => "Métrica Numérica (Moeda/Financeiro)",
+                    TipoSemanticoColuna.NumericoQuantidade => "Métrica Numérica (Quantidade/Contagem)",
+                    TipoSemanticoColuna.DataTemporal => "Dimensão Temporal (Data/Período)",
+                    TipoSemanticoColuna.TextoCategoria => $"Dimensão Categórica (Valores únicos na amostra: {perfil.CardinalidadeAmostra})",
+                    TipoSemanticoColuna.TextoIdentificador => "Identificador/Código/Chave [REGRA CRÍTICA: NUNCA USAR COMO MÉTRICA DE SOMA]",
+                    TipoSemanticoColuna.TextoLivre => "Texto Livre/Narrativo (Não recomendado para agrupamento)",
+                    _ => "Outro"
+                };
+
+                var exemplosFormatados = perfil.ExemplosAmostra != null && perfil.ExemplosAmostra.Count > 0
+                    ? string.Join(", ", perfil.ExemplosAmostra.Select(e => $"\"{e}\""))
+                    : "nenhum";
+
+                linhasMetadados.AppendLine($"- Coluna [{perfil.Indice}]: \"{perfil.Nome}\" | Papel: {papelSemantico} | Exemplos: [{exemplosFormatados}]");
+            }
 
             var promptText = $$"""
-                               Sua tarefa é agir como um motor de análise de dados. Você receberá um objetivo e uma lista de colunas com seus respectivos índices numéricos. Sua resposta DEVE usar os índices.
-                               O objetivo da análise do usuário é: '{{contexto}}'.
-                               A lista de colunas e seus índices disponíveis é: {{{colunasComIndices}}}.
-                               Com base no objetivo e nas colunas, sugira até 10 análises relevantes de dimensão e métrica. Para cada sugestão, forneça o índice numérico da coluna de dimensão e o índice numérico da coluna de métrica.
-                               Responda APENAS com um objeto JSON válido no formato:
+                               Você é um motor analítico e planejador de Business Intelligence (BI).
+                               Sua missão é planejar análises de dados altamente relevantes cruzando dimensões e métricas compatíveis.
+
+                               OBJETIVO DE NEGÓCIO DO USUÁRIO:
+                               "{{contexto}}"
+
+                               METADADOS E PERFIL SEMÂNTICO DAS COLUNAS DISPONÍVEIS:
+                               {{linhasMetadados.ToString().TrimEnd()}}
+
+                               DIRETRIZES ANALÍTICAS OBRIGATÓRIAS:
+                               1. REGRA DE OURO (MÉTRICAS): NUNCA utilize colunas com papel de 'Identificador' (como IDs, códigos, CPFs) ou 'Texto Livre' como 'indice_metrica'. Apenas colunas de Métrica Numérica (Moeda ou Quantidade) podem ser somadas.
+                               2. COMPATIBILIDADE DE GRÁFICOS:
+                                  - 'linha': Use preferencialmente quando 'indice_dimensao' for uma coluna Temporal (Data/Período).
+                                  - 'pizza': Use apenas para colunas Categóricas com baixa cardinalidade (<= 7 categorias distintas).
+                                  - 'barras': Ideal para comparações entre categorias e métricas numéricas.
+                               3. Sugira até 10 análises estratégicas que respondam diretamente ao objetivo do usuário.
+                               4. Retorne EXCLUSIVAMENTE um array JSON válido contendo objetos no formato abaixo (sem texto conversacional antes ou depois):
+
                                [
-                                 { "titulo_grafico": "...", "tipo_grafico": "barras|linha|pizza", "indice_dimensao": <numero>, "indice_metrica": <numero> }
+                                 {
+                                   "titulo_grafico": "Descrição clara e executiva do gráfico",
+                                   "tipo_grafico": "barras|linha|pizza",
+                                   "indice_dimensao": <numero_do_indice_da_dimensao>,
+                                   "indice_metrica": <numero_do_indice_da_metrica>
+                                 }
                                ]
                                """;
 
@@ -94,10 +137,54 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
 
             if (string.IsNullOrEmpty(responseText)) return null;
 
-            var jsonPlanoAnalise = responseText.Trim('`').Replace("json", "").Trim();
-            var opcoesJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            // Extração defensiva com Regex para capturar o array JSON
+            var matchJson = Regex.Match(responseText, @"\[\s*\{[\s\S]*\}\s*\]");
+            if (!matchJson.Success)
+            {
+                return null;
+            }
 
-            return JsonSerializer.Deserialize<List<AnaliseSugerida>>(jsonPlanoAnalise, opcoesJson);
+            var jsonPlanoAnalise = matchJson.Value;
+            var opcoesJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var sugestoesBrutas = JsonSerializer.Deserialize<List<AnaliseSugerida>>(jsonPlanoAnalise, opcoesJson);
+
+            if (sugestoesBrutas == null || sugestoesBrutas.Count == 0)
+            {
+                return null;
+            }
+
+            // Validação defensiva: integridade de índices e regras semânticas
+            var totalColunas = headers.Length;
+            var colunasPorIndice = perfilColunas.ToDictionary(p => p.Indice);
+
+            var sugestoesValidadas = new List<AnaliseSugerida>();
+            foreach (var analise in sugestoesBrutas)
+            {
+                // 1. Validar limites de índices
+                if (analise.indice_dimensao < 0 || analise.indice_dimensao >= totalColunas ||
+                    analise.indice_metrica < 0 || analise.indice_metrica >= totalColunas)
+                {
+                    continue;
+                }
+
+                // 2. Rejeitar identificador como métrica
+                if (colunasPorIndice.TryGetValue(analise.indice_metrica, out var perfilMetrica) &&
+                    perfilMetrica.TipoSemantico == TipoSemanticoColuna.TextoIdentificador)
+                {
+                    continue;
+                }
+
+                // 3. Fallback seguro para tipo de gráfico
+                var tipoNormalizado = analise.tipo_grafico?.ToLowerInvariant()?.Trim();
+                if (tipoNormalizado != "barras" && tipoNormalizado != "linha" && tipoNormalizado != "pizza")
+                {
+                    analise.tipo_grafico = "barras";
+                }
+
+                sugestoesValidadas.Add(analise);
+            }
+
+            return sugestoesValidadas.Count > 0 ? sugestoesValidadas : null;
         }
 
         private DateTime TentarConverterParaData(object valorCategoria)
