@@ -1,6 +1,6 @@
 using QuiosqueBI.API.Models;
 
-namespace QuiosqueBI.API.Services.Analise.Fase3_Exploracao
+namespace QuiosqueBI.API.Services.Analise.Exploracao
 {
 	public interface IExploracaoService
 	{

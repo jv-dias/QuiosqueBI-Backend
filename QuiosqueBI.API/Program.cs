@@ -6,9 +6,9 @@ using Microsoft.IdentityModel.Tokens;
 using QuiosqueBI.API.Data;
 using QuiosqueBI.API.Services;
 using QuiosqueBI.API.Services.Analise;
-using QuiosqueBI.API.Services.Analise.Fase1_Coleta;
-using QuiosqueBI.API.Services.Analise.Fase3_Exploracao;
-using QuiosqueBI.API.Services.Analise.Fase5_Persistencia;
+using QuiosqueBI.API.Services.Analise.Coleta;
+using QuiosqueBI.API.Services.Analise.Exploracao;
+using QuiosqueBI.API.Services.Analise.Persistencia;
 
 
 try
@@ -77,6 +77,8 @@ try
         {
             ValidateIssuer = true,
             ValidateAudience = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
             ValidAudience = builder.Configuration["Jwt:Audience"],
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))

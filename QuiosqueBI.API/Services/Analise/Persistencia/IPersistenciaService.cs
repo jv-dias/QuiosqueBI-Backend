@@ -1,6 +1,6 @@
 using QuiosqueBI.API.Models;
 
-namespace QuiosqueBI.API.Services.Analise.Fase5_Persistencia
+namespace QuiosqueBI.API.Services.Analise.Persistencia
 {
 	public interface IPersistenciaService
 	{

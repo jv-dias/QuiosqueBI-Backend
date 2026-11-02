@@ -1,7 +1,7 @@
 using QuiosqueBI.API.Models;
-using QuiosqueBI.API.Services.Analise.Fase1_Coleta;
-using QuiosqueBI.API.Services.Analise.Fase3_Exploracao;
-using QuiosqueBI.API.Services.Analise.Fase5_Persistencia;
+using QuiosqueBI.API.Services.Analise.Coleta;
+using QuiosqueBI.API.Services.Analise.Exploracao;
+using QuiosqueBI.API.Services.Analise.Persistencia;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -28,11 +28,11 @@ namespace QuiosqueBI.API.Services.Analise
                 throw new UnauthorizedAccessException("Usuário não autenticado.");
             }
 
-            // Fases 1 e 3
+            // Coleta e Exploração
             var dadosDoArquivo = await _coletaService.LerDadosDoArquivoAsync(arquivo);
             var resultados = await _exploracaoService.GerarInsightsIniciaisAsync(dadosDoArquivo, contexto);
 
-            // Fase 5: O orquestrador é responsável por MONTAR o objeto
+            // Persistência: O orquestrador é responsável por MONTAR o objeto
             if (resultados.Any())
             {
                 var analiseParaSalvar = new AnaliseSalva
