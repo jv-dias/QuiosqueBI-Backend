@@ -140,14 +140,19 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao.Profiling
                 return TipoSemanticoColuna.DataTemporal;
             }
 
-            // 2. Verificação de Identificadores Chaves (CPFs, IDs, Códigos)
-            if (EhColunaIdentificador(nomeNormalizado, taxaUnicidade, cardinalidade, valores.Count))
+            // 2. Verificação de características numéricas
+            bool temCasasDecimais = false;
+            bool temSimboloMoeda = false;
+            bool ehNumerico = valores.Count > 0 && EhPredominantementeNumerico(valores, out temCasasDecimais, out temSimboloMoeda);
+
+            // 3. Verificação de Identificadores Chaves (CPFs, IDs, Códigos)
+            if (EhColunaIdentificador(nomeNormalizado, taxaUnicidade, cardinalidade, valores.Count, ehNumerico))
             {
                 return TipoSemanticoColuna.TextoIdentificador;
             }
 
-            // 3. Verificação Numérica / Monetária ou Quantidade
-            if (valores.Count > 0 && EhPredominantementeNumerico(valores, out bool temCasasDecimais, out bool temSimboloMoeda))
+            // 4. Verificação Numérica / Monetária ou Quantidade
+            if (ehNumerico)
             {
                 if (temSimboloMoeda || temCasasDecimais || ContemTermoFinanceiro(nomeNormalizado))
                 {
@@ -157,13 +162,13 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao.Profiling
                 return TipoSemanticoColuna.NumericoQuantidade;
             }
 
-            // 4. Verificação de Textos Livres (descrições longas não agrupáveis)
+            // 5. Verificação de Textos Livres (descrições longas não agrupáveis)
             if (valores.Count > 0 && valores.Average(v => v.Length) > 60)
             {
                 return TipoSemanticoColuna.TextoLivre;
             }
 
-            // 5. Categoria Padrão (Dimensão Qualitativa)
+            // 6. Categoria Padrão (Dimensão Qualitativa)
             return TipoSemanticoColuna.TextoCategoria;
         }
 
@@ -188,7 +193,7 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao.Profiling
             return (pistaNoNome && taxaConversao > 0.4) || taxaConversao > 0.75;
         }
 
-        private bool EhColunaIdentificador(string nomeNormalizado, double taxaUnicidade, int cardinalidade, int totalValores)
+        private bool EhColunaIdentificador(string nomeNormalizado, double taxaUnicidade, int cardinalidade, int totalValores, bool ehNumerico)
         {
             string[] termosIdentificadores = { "id", "cod", "código", "codigo", "cpf", "cnpj", "rg", "matricula", "matrícula", "sku", "uuid", "guid", "chave", "telefone", "celular", "email", "e-mail" };
             bool temPistaIdentificador = termosIdentificadores.Any(t =>
@@ -199,13 +204,24 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao.Profiling
                 nomeNormalizado.Contains($"cpf") ||
                 nomeNormalizado.Contains($"cnpj"));
 
-            // Taxa de unicidade muito alta (> 85% em amostras representativas) indica ID/Chave
+            if (temPistaIdentificador)
+            {
+                return true;
+            }
+
+            // Valores predominantemente numéricos sem pistas no nome são métricas, não IDs
+            if (ehNumerico)
+            {
+                return false;
+            }
+
+            // Para textos: taxa de unicidade muito alta (> 85% em amostras representativas) indica ID/Chave
             if (totalValores >= 15 && taxaUnicidade >= 0.85)
             {
                 return true;
             }
 
-            return temPistaIdentificador;
+            return false;
         }
 
         private bool EhPredominantementeNumerico(List<string> valores, out bool temCasasDecimais, out bool temSimboloMoeda)

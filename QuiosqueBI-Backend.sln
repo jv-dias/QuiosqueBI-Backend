@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuiosqueBI.API", "QuiosqueBI.API\QuiosqueBI.API.csproj", "{845C7136-26F7-490F-BA8A-62D267A0024D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuiosqueBI.Tests", "QuiosqueBI.Tests\QuiosqueBI.Tests.csproj", "{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{845C7136-26F7-490F-BA8A-62D267A0024D}.Release|x64.Build.0 = Release|Any CPU
 		{845C7136-26F7-490F-BA8A-62D267A0024D}.Release|x86.ActiveCfg = Release|Any CPU
 		{845C7136-26F7-490F-BA8A-62D267A0024D}.Release|x86.Build.0 = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|x64.Build.0 = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Debug|x86.Build.0 = Debug|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|x64.ActiveCfg = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|x64.Build.0 = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|x86.ActiveCfg = Release|Any CPU
+		{5E29F6C2-DC72-49F9-9AE9-5A70872A7F8D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

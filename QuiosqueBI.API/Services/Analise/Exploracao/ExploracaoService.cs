@@ -135,7 +135,15 @@ namespace QuiosqueBI.API.Services.Analise.Exploracao
             var response = await model.GenerateContent(promptText);
             var responseText = response?.Text?.Trim() ?? string.Empty;
 
-            if (string.IsNullOrEmpty(responseText)) return null;
+            return ProcessarERefinarPlanoAnalise(responseText, headers, perfilColunas);
+        }
+
+        internal List<AnaliseSugerida>? ProcessarERefinarPlanoAnalise(
+            string responseText,
+            string[] headers,
+            List<PerfilColuna> perfilColunas)
+        {
+            if (string.IsNullOrWhiteSpace(responseText)) return null;
 
             // Extração defensiva com Regex para capturar o array JSON
             var matchJson = Regex.Match(responseText, @"\[\s*\{[\s\S]*\}\s*\]");
