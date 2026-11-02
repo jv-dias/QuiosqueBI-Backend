@@ -2,6 +2,7 @@ using QuiosqueBI.API.Models;
 using QuiosqueBI.API.Services.Analise.Coleta;
 using QuiosqueBI.API.Services.Analise.Exploracao;
 using QuiosqueBI.API.Services.Analise.Persistencia;
+using QuiosqueBI.API.Services.Analise.Preparacao;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -10,12 +11,18 @@ namespace QuiosqueBI.API.Services.Analise
     public class AnaliseOrquestradorService : IAnaliseOrquestradorService
     {
         private readonly IColetaService _coletaService;
+        private readonly IPreparacaoService _preparacaoService;
         private readonly IExploracaoService _exploracaoService;
         private readonly IPersistenciaService _persistenciaService;
 
-        public AnaliseOrquestradorService(IColetaService coletaService, IExploracaoService exploracaoService, IPersistenciaService persistenciaService)
+        public AnaliseOrquestradorService(
+            IColetaService coletaService,
+            IPreparacaoService preparacaoService,
+            IExploracaoService exploracaoService,
+            IPersistenciaService persistenciaService)
         {
             _coletaService = coletaService;
+            _preparacaoService = preparacaoService;
             _exploracaoService = exploracaoService;
             _persistenciaService = persistenciaService;
         }
@@ -28,9 +35,10 @@ namespace QuiosqueBI.API.Services.Analise
                 throw new UnauthorizedAccessException("Usuário não autenticado.");
             }
 
-            // Coleta e Exploração
+            // Coleta, Preparação e Exploração
             var dadosDoArquivo = await _coletaService.LerDadosDoArquivoAsync(arquivo);
-            var resultados = await _exploracaoService.GerarInsightsIniciaisAsync(dadosDoArquivo, contexto);
+            var dadosSanitizados = _preparacaoService.PrepararDados(dadosDoArquivo);
+            var resultados = await _exploracaoService.GerarInsightsIniciaisAsync(dadosSanitizados, contexto);
 
             // Persistência: O orquestrador é responsável por MONTAR o objeto
             if (resultados.Any())
